@@ -74,10 +74,12 @@ def load_settings() -> Settings:
     kpi_record_id = os.getenv("KPI_RECORD_ID", "").strip() or None
 
     # UPDATE_KPIS: true = write after stats (no question). false = stats only.
-    # prompt (default if unset) = ask in the terminal whether to write to KPIS.
+    # prompt = ask in an interactive terminal (default locally only).
+    is_ci = os.getenv("GITHUB_ACTIONS") == "true"
     _uk = os.getenv("UPDATE_KPIS")
     if _uk is None or not str(_uk).strip():
-        kpi_update_mode = "prompt"
+        # In GitHub Actions the workflow should pass UPDATE_KPIS; if missing, do not assume prompt.
+        kpi_update_mode = "never" if is_ci else "prompt"
     else:
         raw = str(_uk).strip().lower()
         if raw in ("1", "true", "yes", "always"):
@@ -89,11 +91,18 @@ def load_settings() -> Settings:
         else:
             kpi_update_mode = "prompt"
 
-    if kpi_update_mode == "prompt" and not sys.stdin.isatty():
+    if kpi_update_mode == "prompt" and (is_ci or not sys.stdin.isatty()):
         kpi_update_mode = "never"
-        logger.warning(
-            "UPDATE_KPIS=prompt needs an interactive terminal; using 'never' for this run (e.g. GitHub Actions)."
-        )
+        if is_ci:
+            logger.warning(
+                "UPDATE_KPIS=prompt is invalid in GitHub Actions (no keyboard). "
+                "Set repository Secret or Variable UPDATE_KPIS=true (literal true) to write KPIS. "
+                "Using never for this run."
+            )
+        else:
+            logger.warning(
+                "UPDATE_KPIS=prompt needs an interactive terminal; using never for this run."
+            )
 
     prospect_situation_field = (
         os.getenv("PROSPECT_SITUATION_FIELD", "").strip() or "Prospect Situation"
@@ -524,7 +533,7 @@ def main() -> int:
     if settings.kpi_update_mode == "always":
         logger.info("UPDATE_KPIS=true — KPI row will be updated after counts (no prompt).")
     elif settings.kpi_update_mode == "never":
-        logger.info("UPDATE_KPIS=false — counts only, KPIS will not be modified.")
+        logger.info("KPIS writes disabled (effective mode: never).")
     else:
         logger.info(
             "UPDATE_KPIS=prompt (default) — after counts you will be asked whether to update KPIS."

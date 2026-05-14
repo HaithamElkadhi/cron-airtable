@@ -7,12 +7,12 @@
 #
 # Optional secrets:
 #   AIRTABLE_BASE_ID
-#   KPIS_TABLE_NAME                  Required if UPDATE_KPIS is true (or prompt)
+#   KPIS_TABLE_NAME                  Required when UPDATE_KPIS is true
 #   KPI_RECORD_ID                    Set to PATCH that row; omit to POST a new row each run
 #   PROSPECT_SITUATION_FIELD
 #
-#   UPDATE_KPIS                      true | false — use Secret OR Variable (workflow tries both).
-#                                    Must be true for CI to write KPIS (no TTY: "prompt" becomes never).
+#   UPDATE_KPIS                      Literal true or false (not prompt). Secret or Variable; secret wins.
+#                                    Use true to write KPIS in CI; PAT needs data.records:write.
 
 name: Daily Airtable stats
 
