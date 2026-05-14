@@ -1,6 +1,6 @@
 # Airtable prospect stats (API only)
 
-Single script **`main.py`**: reads `.env`, calls the Airtable REST API, prints **Prospect Situation** counts, then either asks whether to write **KPIS** (`UPDATE_KPIS=prompt`, default), always writes (`true`), or never (`false`). Without **`KPI_RECORD_ID`**, each write **creates a new** KPIS row; with **`KPI_RECORD_ID`**, that row is **updated**. Fields: **Serious**, **Admitted**, **Lost**, **Last_chance**, **Engaged**.
+Single script **`main.py`**: reads `.env`, calls the Airtable REST API, prints **Prospect Situation** counts (Lost, Engaged, Last chance, Admitted, Serious, **Potential**, **Completed**), then either asks whether to write **KPIS** (`UPDATE_KPIS=prompt`, default), always writes (`true`), or never (`false`). Without **`KPI_RECORD_ID`**, each write **creates a new** KPIS row; with **`KPI_RECORD_ID`**, that row is **updated**. KPIS fields: **Serious**, **Admitted**, **Lost**, **Last_chance**, **Engaged**, **Potential**, **Completed**.
 
 ## Prerequisites
 

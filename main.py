@@ -254,7 +254,16 @@ class AirtableClient:
 
 # --- stats -------------------------------------------------------------------
 DEFAULT_SITUATION_FIELD = "Prospect Situation"
-ORDERED_LABELS = ("Lost", "Engaged", "Last chance", "Admitted", "Serious")
+# Situation values we count (Prospect Situation) and mirror to KPIS number fields.
+ORDERED_LABELS = (
+    "Lost",
+    "Engaged",
+    "Last chance",
+    "Admitted",
+    "Serious",
+    "Potential",
+    "Completed",
+)
 
 _ALIAS_TO_CANONICAL: dict[str, str] = {
     "lost": "Lost",
@@ -264,6 +273,8 @@ _ALIAS_TO_CANONICAL: dict[str, str] = {
     "lastchance": "Last chance",
     "admitted": "Admitted",
     "serious": "Serious",
+    "potential": "Potential",
+    "completed": "Completed",
 }
 
 _WS_RE = re.compile(r"\s+")
@@ -392,8 +403,9 @@ def count_prospect_situations(
 
     if unknown:
         logger.warning(
-            "Values in %r that do not match Lost / Engaged / Last chance / Admitted / Serious: %s",
+            "Values in %r outside the tracked situation labels %s: %s",
             field_name,
+            ", ".join(repr(x) for x in ORDERED_LABELS),
             ", ".join(f"{k!r} ({v})" for k, v in sorted(unknown.items())[:25]),
         )
 
@@ -410,13 +422,22 @@ def count_prospect_situations(
 
 
 def kpi_payload_from_counts(counts: dict[str, int]) -> dict[str, int]:
+    """KPIS column names must exist on the KPI row (numbers)."""
     return {
         "Serious": int(counts["Serious"]),
         "Admitted": int(counts["Admitted"]),
         "Lost": int(counts["Lost"]),
         "Last_chance": int(counts["Last chance"]),
         "Engaged": int(counts["Engaged"]),
+        "Potential": int(counts["Potential"]),
+        "Completed": int(counts["Completed"]),
     }
+
+
+# Airtable field names written on KPIS (for logs / errors)
+KPIS_FIELD_NAMES_LOG = (
+    "Serious, Admitted, Lost, Last_chance, Engaged, Potential, Completed"
+)
 
 
 # --- orchestration -----------------------------------------------------------
@@ -453,8 +474,8 @@ def _raise_api_context(
     if kpis and t == "UNKNOWN_FIELD_NAME":
         raise RuntimeError(
             "One or more KPI fields were rejected by Airtable (UNKNOWN_FIELD_NAME). "
-            "Verify the KPIS table has fields named exactly: "
-            "Serious, Admitted, Lost, Last_chance, Engaged."
+            "Verify the KPIS table has these fields (exact names): "
+            f"{KPIS_FIELD_NAMES_LOG}."
         ) from err
     raise err
 
@@ -485,20 +506,15 @@ def _patch_kpis(client: AirtableClient, settings: Settings, record_id: str, fiel
 def _apply_kpi_update(
     client: AirtableClient, settings: Settings, counts: dict[str, int]
 ) -> None:
-    """Write Serious, Admitted, Lost, Last_chance, Engaged — PATCH if KPI_RECORD_ID set, else POST new row."""
+    """Write KPI number fields — PATCH if KPI_RECORD_ID set, else POST new row."""
     payload = kpi_payload_from_counts(counts)
     if settings.kpi_record_id:
         rid = settings.kpi_record_id
-        logger.info(
-            "Updating KPIS row %s — fields: Serious, Admitted, Lost, Last_chance, Engaged",
-            rid,
-        )
+        logger.info("Updating KPIS row %s — fields: %s", rid, KPIS_FIELD_NAMES_LOG)
         _patch_kpis(client, settings, rid, payload)
         logger.info("KPIS row updated.")
     else:
-        logger.info(
-            "Creating new KPIS row — fields: Serious, Admitted, Lost, Last_chance, Engaged"
-        )
+        logger.info("Creating new KPIS row — fields: %s", KPIS_FIELD_NAMES_LOG)
         new_id = _create_kpis_row(client, settings, payload)
         logger.info(
             "Created KPIS record %s. To update this same row next time, add to .env: KPI_RECORD_ID=%s",
@@ -511,7 +527,7 @@ def _want_kpi_write_interactive() -> bool:
     print("")
     print("Write these counts to the KPIS table?")
     print("  (Creates a new row unless KPI_RECORD_ID is set in .env, then updates that row.)")
-    print("  Fields: Serious, Admitted, Lost, Last_chance, Engaged")
+    print("  Fields: " + KPIS_FIELD_NAMES_LOG)
     try:
         ans = input("  Type y or yes to update, anything else to skip [N]: ").strip().lower()
     except EOFError:
