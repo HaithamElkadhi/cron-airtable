@@ -564,6 +564,11 @@ def main() -> int:
             _apply_kpi_update(client, settings, counts)
         elif settings.kpi_update_mode == "prompt":
             logger.info("KPIS update skipped (no confirmation).")
+        elif os.getenv("GITHUB_ACTIONS") == "true" and not do_kpis:
+            logger.info(
+                "GitHub Actions: KPIS not written. To enable, set repository Secret or Variable "
+                "UPDATE_KPIS=true, add Secret KPIS_TABLE_NAME, and grant the PAT data.records:write."
+            )
 
         logger.info("Done.")
     except RuntimeError as e:

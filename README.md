@@ -24,7 +24,7 @@ See `.env.example`. You need at least:
 - **`AIRTABLE_PERSONAL_ACCESS_TOKEN`**
 - **`PROSPECTS_TABLE_NAME`** (or `PROSPECTS_TABLE_ID`)
 - **`KPIS_TABLE_NAME`** (or `KPIS_TABLE_ID`) if you use `UPDATE_KPIS=prompt` or `true`.
-- **`UPDATE_KPIS`:** `prompt` (default if unset) asks after stats; `true` writes without asking; `false` never writes.
+- **`UPDATE_KPIS`:** `prompt` (default locally if unset) asks after stats; `true` writes without asking; `false` never writes. **On GitHub Actions** there is no keyboard: `prompt` is treated as **never**, and the workflow defaults `UPDATE_KPIS` to **`false`** unless you set a repository **Variable** or **Secret** named `UPDATE_KPIS` to **`true`** (the workflow passes `secrets.UPDATE_KPIS` first, then `vars.UPDATE_KPIS`).
 - **`KPI_RECORD_ID`** (optional): if set, that row is **updated**. If omitted, each write **creates a new** KPIS row (the log prints the new `rec…`; put it in `.env` if you want to update that same row next time).
 
 ## Run

@@ -11,8 +11,8 @@
 #   KPI_RECORD_ID                    Set to PATCH that row; omit to POST a new row each run
 #   PROSPECT_SITUATION_FIELD
 #
-# Repository variable (optional, Settings → Secrets and variables → Actions → Variables):
-#   UPDATE_KPIS                      true | false — default false in CI (never use "prompt" here: no TTY)
+#   UPDATE_KPIS                      true | false — use Secret OR Variable (workflow tries both).
+#                                    Must be true for CI to write KPIS (no TTY: "prompt" becomes never).
 
 name: Daily Airtable stats
 
@@ -54,5 +54,6 @@ jobs:
           KPIS_TABLE_NAME: ${{ secrets.KPIS_TABLE_NAME }}
           KPI_RECORD_ID: ${{ secrets.KPI_RECORD_ID }}
           PROSPECT_SITUATION_FIELD: ${{ secrets.PROSPECT_SITUATION_FIELD }}
-          UPDATE_KPIS: ${{ vars.UPDATE_KPIS }}
+          # Secret wins over Variable; default false so scheduled runs do not write unless you opt in.
+          UPDATE_KPIS: ${{ secrets.UPDATE_KPIS || vars.UPDATE_KPIS || 'false' }}
         run: python main.py
