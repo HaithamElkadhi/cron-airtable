@@ -1,0 +1,58 @@
+# Daily Airtable prospect stats (and optional KPIS write) via API.
+#
+# Required repository secrets (Settings → Secrets and variables → Actions):
+#   AIRTABLE_BASE_URL                URL containing app… (or use AIRTABLE_BASE_ID)
+#   AIRTABLE_PERSONAL_ACCESS_TOKEN   PAT: data.records:read (+ data.records:write if KPIS updates)
+#   PROSPECTS_TABLE_NAME             e.g. Prospects
+#
+# Optional secrets:
+#   AIRTABLE_BASE_ID
+#   KPIS_TABLE_NAME                  Required if UPDATE_KPIS is true (or prompt)
+#   KPI_RECORD_ID                    Set to PATCH that row; omit to POST a new row each run
+#   PROSPECT_SITUATION_FIELD
+#
+# Repository variable (optional, Settings → Secrets and variables → Actions → Variables):
+#   UPDATE_KPIS                      true | false — default false in CI (never use "prompt" here: no TTY)
+
+name: Daily Airtable stats
+
+on:
+  schedule:
+    # 07:15 UTC daily — edit to your preferred UTC time
+    - cron: "15 7 * * *"
+  workflow_dispatch:
+
+concurrency:
+  group: airtable-daily-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  airtable:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: "pip"
+          cache-dependency-path: requirements.txt
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Run Airtable script
+        env:
+          AIRTABLE_BASE_URL: ${{ secrets.AIRTABLE_BASE_URL }}
+          AIRTABLE_BASE_ID: ${{ secrets.AIRTABLE_BASE_ID }}
+          AIRTABLE_PERSONAL_ACCESS_TOKEN: ${{ secrets.AIRTABLE_PERSONAL_ACCESS_TOKEN }}
+          PROSPECTS_TABLE_NAME: ${{ secrets.PROSPECTS_TABLE_NAME }}
+          KPIS_TABLE_NAME: ${{ secrets.KPIS_TABLE_NAME }}
+          KPI_RECORD_ID: ${{ secrets.KPI_RECORD_ID }}
+          PROSPECT_SITUATION_FIELD: ${{ secrets.PROSPECT_SITUATION_FIELD }}
+          UPDATE_KPIS: ${{ vars.UPDATE_KPIS }}
+        run: python main.py

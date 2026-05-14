@@ -10,6 +10,7 @@ import json
 import logging
 import os
 import re
+import sys
 import time
 from collections import Counter
 from dataclasses import dataclass
@@ -87,6 +88,12 @@ def load_settings() -> Settings:
             kpi_update_mode = "prompt"
         else:
             kpi_update_mode = "prompt"
+
+    if kpi_update_mode == "prompt" and not sys.stdin.isatty():
+        kpi_update_mode = "never"
+        logger.warning(
+            "UPDATE_KPIS=prompt needs an interactive terminal; using 'never' for this run (e.g. GitHub Actions)."
+        )
 
     prospect_situation_field = (
         os.getenv("PROSPECT_SITUATION_FIELD", "").strip() or "Prospect Situation"
