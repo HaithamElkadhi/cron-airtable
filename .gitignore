@@ -1,0 +1,48 @@
+# Secrets and local env
+.env
+.env.local
+.env.*.local
+
+# Legacy local session dumps (no longer used; safe to ignore)
+storage/*.json
+storage/*.dat
+!storage/.gitkeep
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+.venv/
+venv/
+ENV/
+
+# IDE / OS
+.idea/
+.vscode/
+*.swp
+.DS_Store
+Thumbs.db
+
+# Logs and cache
+*.log
+.cache/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
