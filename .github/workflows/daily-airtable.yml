@@ -7,7 +7,7 @@
 #
 # Optional secrets:
 #   AIRTABLE_BASE_ID
-#   KPIS_TABLE_NAME                  Required when UPDATE_KPIS is true (row needs Serious, Admitted, Lost, Last_chance, Engaged, Potential, Completed)
+#   KPIS_TABLE_NAME                  Required when UPDATE_KPIS is true (row needs Serious, Admitted, Lost, Last_chance, Engaged, Potential, Completed, Undecided, Total_Prospect)
 #   KPI_RECORD_ID                    Set to PATCH that row; omit to POST a new row each run
 #   PROSPECT_SITUATION_FIELD
 #

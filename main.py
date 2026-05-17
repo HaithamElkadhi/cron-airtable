@@ -263,6 +263,7 @@ ORDERED_LABELS = (
     "Serious",
     "Potential",
     "Completed",
+    "Undecided",
 )
 
 _ALIAS_TO_CANONICAL: dict[str, str] = {
@@ -275,6 +276,7 @@ _ALIAS_TO_CANONICAL: dict[str, str] = {
     "serious": "Serious",
     "potential": "Potential",
     "completed": "Completed",
+    "undecided": "Undecided",
 }
 
 _WS_RE = re.compile(r"\s+")
@@ -421,7 +423,7 @@ def count_prospect_situations(
     return counts
 
 
-def kpi_payload_from_counts(counts: dict[str, int]) -> dict[str, int]:
+def kpi_payload_from_counts(counts: dict[str, int], total_prospects: int) -> dict[str, int]:
     """KPIS column names must exist on the KPI row (numbers)."""
     return {
         "Serious": int(counts["Serious"]),
@@ -431,12 +433,15 @@ def kpi_payload_from_counts(counts: dict[str, int]) -> dict[str, int]:
         "Engaged": int(counts["Engaged"]),
         "Potential": int(counts["Potential"]),
         "Completed": int(counts["Completed"]),
+        "Undecided": int(counts["Undecided"]),
+        "Total_Prospect": int(total_prospects),
     }
 
 
 # Airtable field names written on KPIS (for logs / errors)
 KPIS_FIELD_NAMES_LOG = (
-    "Serious, Admitted, Lost, Last_chance, Engaged, Potential, Completed"
+    "Serious, Admitted, Lost, Last_chance, Engaged, Potential, Completed, "
+    "Undecided, Total_Prospect"
 )
 
 
@@ -504,10 +509,13 @@ def _patch_kpis(client: AirtableClient, settings: Settings, record_id: str, fiel
 
 
 def _apply_kpi_update(
-    client: AirtableClient, settings: Settings, counts: dict[str, int]
+    client: AirtableClient,
+    settings: Settings,
+    counts: dict[str, int],
+    total_prospects: int,
 ) -> None:
     """Write KPI number fields — PATCH if KPI_RECORD_ID set, else POST new row."""
-    payload = kpi_payload_from_counts(counts)
+    payload = kpi_payload_from_counts(counts, total_prospects)
     if settings.kpi_record_id:
         rid = settings.kpi_record_id
         logger.info("Updating KPIS row %s — fields: %s", rid, KPIS_FIELD_NAMES_LOG)
@@ -571,11 +579,13 @@ def main() -> int:
         log_situation_field_diagnostics(prospects, settings.prospect_situation_field)
         logger.info("Counting stats…")
         counts = count_prospect_situations(prospects, settings.prospect_situation_field)
+        total_prospects = len(prospects)
 
         print("")
         print("--- Prospect Situation counts ---")
         for label in ORDERED_LABELS:
             print(f"{label}: {counts[label]}")
+        print(f"Total Prospect: {total_prospects}")
         print("---------------------------------")
         print("")
 
@@ -586,7 +596,7 @@ def main() -> int:
             do_kpis = _want_kpi_write_interactive()
 
         if do_kpis:
-            _apply_kpi_update(client, settings, counts)
+            _apply_kpi_update(client, settings, counts, total_prospects)
         elif settings.kpi_update_mode == "prompt":
             logger.info("KPIS update skipped (no confirmation).")
         elif os.getenv("GITHUB_ACTIONS") == "true" and not do_kpis:
