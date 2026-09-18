@@ -1,16 +1,13 @@
 # Daily Airtable prospect stats (and optional KPIS write) via API.
 #
-# Required repository secrets (Settings → Secrets and variables → Actions):
-#   AIRTABLE_BASE_URL                URL containing app… (or use AIRTABLE_BASE_ID)
+# Base id, table names, and the situation field are hardcoded defaults in main.py.
+#
+# Required repository secret (Settings → Secrets and variables → Actions):
 #   AIRTABLE_PERSONAL_ACCESS_TOKEN   PAT: data.records:read (+ data.records:write if KPIS updates)
-#   PROSPECTS_TABLE_NAME             e.g. Prospects
+#                                    Access must include the Prospects and KPIS tables.
 #
 # Optional secrets:
-#   AIRTABLE_BASE_ID
-#   KPIS_TABLE_NAME                  Required when UPDATE_KPIS is true (row needs Lost, Lead, Prospect, Candidate, Student, Total_Prospect)
 #   KPI_RECORD_ID                    Set to PATCH that row; omit to POST a new row each run
-#   PROSPECT_SITUATION_FIELD
-#
 #   UPDATE_KPIS                      Literal true or false (not prompt). Secret or Variable; secret wins.
 #                                    Use true to write KPIS in CI; PAT needs data.records:write.
 
@@ -47,13 +44,8 @@ jobs:
 
       - name: Run Airtable script
         env:
-          AIRTABLE_BASE_URL: ${{ secrets.AIRTABLE_BASE_URL }}
-          AIRTABLE_BASE_ID: ${{ secrets.AIRTABLE_BASE_ID }}
           AIRTABLE_PERSONAL_ACCESS_TOKEN: ${{ secrets.AIRTABLE_PERSONAL_ACCESS_TOKEN }}
-          PROSPECTS_TABLE_NAME: ${{ secrets.PROSPECTS_TABLE_NAME }}
-          KPIS_TABLE_NAME: ${{ secrets.KPIS_TABLE_NAME }}
           KPI_RECORD_ID: ${{ secrets.KPI_RECORD_ID }}
-          PROSPECT_SITUATION_FIELD: ${{ secrets.PROSPECT_SITUATION_FIELD }}
           # Secret wins over Variable; default false so scheduled runs do not write unless you opt in.
           UPDATE_KPIS: ${{ secrets.UPDATE_KPIS || vars.UPDATE_KPIS || 'false' }}
         run: python main.py

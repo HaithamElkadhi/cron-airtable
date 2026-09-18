@@ -28,6 +28,13 @@ def _configure_logging() -> None:
 
 
 # --- config ------------------------------------------------------------------
+# Stable settings for this base — override via env only if you point the script
+# at a different base/table without editing code.
+DEFAULT_BASE_ID = "appkqvTuc8F0AhWPp"
+DEFAULT_PROSPECTS_TABLE = "Prospects"
+DEFAULT_KPIS_TABLE = "KPIS"
+DEFAULT_SITUATION_FIELD = "Prospect Situation"
+
 _BASE_ID_RE = re.compile(r"app[a-zA-Z0-9]{14}")
 
 
@@ -52,24 +59,15 @@ class Settings:
 def load_settings() -> Settings:
     load_dotenv()
 
-    base_url = os.getenv("AIRTABLE_BASE_URL", "").strip()
-    base_id = os.getenv("AIRTABLE_BASE_ID", "").strip()
-    if not base_id:
-        base_id = _parse_base_id_from_url(base_url) or ""
+    base_id = (
+        os.getenv("AIRTABLE_BASE_ID", "").strip()
+        or _parse_base_id_from_url(os.getenv("AIRTABLE_BASE_URL", "").strip())
+        or DEFAULT_BASE_ID
+    )
+    prospects = os.getenv("PROSPECTS_TABLE_NAME", "").strip() or DEFAULT_PROSPECTS_TABLE
+    kpis = os.getenv("KPIS_TABLE_NAME", "").strip() or DEFAULT_KPIS_TABLE
 
-    prospects = (
-        os.getenv("PROSPECTS_TABLE_ID", "").strip()
-        or os.getenv("PROSPECTS_TABLE_NAME", "").strip()
-    )
-    kpis = (
-        os.getenv("KPIS_TABLE_ID", "").strip()
-        or os.getenv("KPIS_TABLE_NAME", "").strip()
-    )
-
-    token = (
-        os.getenv("AIRTABLE_PERSONAL_ACCESS_TOKEN", "").strip()
-        or os.getenv("AIRTABLE_API_KEY", "").strip()
-    )
+    token = os.getenv("AIRTABLE_PERSONAL_ACCESS_TOKEN", "").strip()
 
     kpi_record_id = os.getenv("KPI_RECORD_ID", "").strip() or None
 
@@ -105,25 +103,11 @@ def load_settings() -> Settings:
             )
 
     prospect_situation_field = (
-        os.getenv("PROSPECT_SITUATION_FIELD", "").strip() or "Prospect Situation"
+        os.getenv("PROSPECT_SITUATION_FIELD", "").strip() or DEFAULT_SITUATION_FIELD
     )
 
-    missing = []
-    if not base_id:
-        missing.append("AIRTABLE_BASE_ID or AIRTABLE_BASE_URL (with app… id)")
-    if not prospects:
-        missing.append("PROSPECTS_TABLE_ID or PROSPECTS_TABLE_NAME")
-    if kpi_update_mode in ("always", "prompt") and not kpis:
-        missing.append(
-            "KPIS_TABLE_ID or KPIS_TABLE_NAME (required when UPDATE_KPIS is true or prompt)"
-        )
     if not token:
-        missing.append("AIRTABLE_PERSONAL_ACCESS_TOKEN or AIRTABLE_API_KEY")
-
-    if missing:
-        raise ValueError(
-            "Missing required environment variables: " + ", ".join(missing)
-        )
+        raise ValueError("Missing required environment variable: AIRTABLE_PERSONAL_ACCESS_TOKEN")
 
     return Settings(
         base_id=base_id,
@@ -253,7 +237,6 @@ class AirtableClient:
 
 
 # --- stats -------------------------------------------------------------------
-DEFAULT_SITUATION_FIELD = "Prospect Situation"
 # Situation values we count (Prospect Situation) and mirror to KPIS number fields.
 ORDERED_LABELS = (
     "Lost",
@@ -454,7 +437,7 @@ def _raise_api_context(
         table = "Prospects" if prospects else "KPIS" if kpis else "requested"
         raise RuntimeError(
             f"{table} table was not found (HTTP {err.status_code}). "
-            f"Check PROSPECTS_TABLE_* / KPIS_TABLE_* in your .env (name or tbl… id)."
+            f"Check PROSPECTS_TABLE_NAME / KPIS_TABLE_NAME in your .env (defaults are hardcoded in main.py)."
         ) from err
     if prospects and t == "UNKNOWN_FIELD_NAME":
         raise RuntimeError(
