@@ -20,7 +20,7 @@ pip install -r requirements.txt
 
 Base id, table names, and the situation field name are **hardcoded defaults in `main.py`** (`DEFAULT_BASE_ID`, `DEFAULT_PROSPECTS_TABLE`, `DEFAULT_KPIS_TABLE`, `DEFAULT_SITUATION_FIELD`). See `.env.example`. You need at least:
 
-- **`AIRTABLE_PERSONAL_ACCESS_TOKEN`** — access must include both the Prospects and KPIS tables.
+- **`AIRTABLE_API_KEY`** — access must include both the Prospects and KPIS tables.
 - **`UPDATE_KPIS`:** `prompt` (default locally if unset) asks after stats; `true` writes without asking; `false` never writes. **On GitHub Actions** there is no keyboard: `prompt` is treated as **never**, and the workflow defaults `UPDATE_KPIS` to **`false`** unless you set a repository **Variable** or **Secret** named `UPDATE_KPIS` to **`true`** (the workflow passes `secrets.UPDATE_KPIS` first, then `vars.UPDATE_KPIS`).
 - **`KPI_RECORD_ID`** (optional): if set, that row is **updated**. If omitted, each write **creates a new** KPIS row (the log prints the new `rec…`; put it in `.env` if you want to update that same row next time).
 

@@ -3,8 +3,8 @@
 # Base id, table names, and the situation field are hardcoded defaults in main.py.
 #
 # Required repository secret (Settings → Secrets and variables → Actions):
-#   AIRTABLE_PERSONAL_ACCESS_TOKEN   PAT: data.records:read (+ data.records:write if KPIS updates)
-#                                    Access must include the Prospects and KPIS tables.
+#   AIRTABLE_API_KEY   Airtable Personal Access Token: data.records:read (+ data.records:write if KPIS updates)
+#                      Access must include the Prospects and KPIS tables.
 #
 # Optional secrets:
 #   KPI_RECORD_ID                    Set to PATCH that row; omit to POST a new row each run
@@ -44,7 +44,7 @@ jobs:
 
       - name: Run Airtable script
         env:
-          AIRTABLE_PERSONAL_ACCESS_TOKEN: ${{ secrets.AIRTABLE_PERSONAL_ACCESS_TOKEN }}
+          AIRTABLE_API_KEY: ${{ secrets.AIRTABLE_API_KEY }}
           KPI_RECORD_ID: ${{ secrets.KPI_RECORD_ID }}
           # Secret wins over Variable; default false so scheduled runs do not write unless you opt in.
           UPDATE_KPIS: ${{ secrets.UPDATE_KPIS || vars.UPDATE_KPIS || 'false' }}

@@ -28,12 +28,36 @@ def _configure_logging() -> None:
 
 
 # --- config ------------------------------------------------------------------
-# Stable settings for this base — override via env only if you point the script
-# at a different base/table without editing code.
+# Stable settings for this base, referenced by Airtable id (not display name) so
+# renaming a table/field in Airtable doesn't break the script. Override via env
+# only if you point the script at a different base/table.
 DEFAULT_BASE_ID = "appkqvTuc8F0AhWPp"
-DEFAULT_PROSPECTS_TABLE = "Prospects"
-DEFAULT_KPIS_TABLE = "KPIS"
-DEFAULT_SITUATION_FIELD = "Prospect Situation"
+DEFAULT_PROSPECTS_TABLE = "tblQPh56AAmCe1bTj"  # Prospects
+DEFAULT_KPIS_TABLE = "tblKH18HxeyAND7Ew"  # KPIS
+DEFAULT_SITUATION_FIELD = "fldLY8mOVCDsJhw23"  # Prospect Situation
+
+# Display names for these same ids, used only in logs/prompts (not for API calls).
+TABLE_DISPLAY_NAMES = {
+    DEFAULT_PROSPECTS_TABLE: "Prospects",
+    DEFAULT_KPIS_TABLE: "KPIS",
+}
+FIELD_DISPLAY_NAMES = {
+    DEFAULT_SITUATION_FIELD: "Prospect Situation",
+}
+
+
+def _display_name(id_or_name: str, table: dict[str, str]) -> str:
+    return table.get(id_or_name, id_or_name)
+
+# KPIS number-field ids (base appkqvTuc8F0AhWPp, table tblKH18HxeyAND7Ew).
+KPIS_FIELD_IDS = {
+    "Lost": "fld7ibMU4zJU2EYGx",
+    "Lead": "fldhaGEHXOJm36RwJ",
+    "Prospect": "fldYHZZYWbjATt5q2",
+    "Candidate": "fldHGW6DC15PHm66S",
+    "Student": "fld7gR8dnERNTw8EF",
+    "Total_Prospect": "fldk1g3NRoclmymOZ",
+}
 
 _BASE_ID_RE = re.compile(r"app[a-zA-Z0-9]{14}")
 
@@ -67,7 +91,7 @@ def load_settings() -> Settings:
     prospects = os.getenv("PROSPECTS_TABLE_NAME", "").strip() or DEFAULT_PROSPECTS_TABLE
     kpis = os.getenv("KPIS_TABLE_NAME", "").strip() or DEFAULT_KPIS_TABLE
 
-    token = os.getenv("AIRTABLE_PERSONAL_ACCESS_TOKEN", "").strip()
+    token = os.getenv("AIRTABLE_API_KEY", "").strip()
 
     kpi_record_id = os.getenv("KPI_RECORD_ID", "").strip() or None
 
@@ -107,7 +131,7 @@ def load_settings() -> Settings:
     )
 
     if not token:
-        raise ValueError("Missing required environment variable: AIRTABLE_PERSONAL_ACCESS_TOKEN")
+        raise ValueError("Missing required environment variable: AIRTABLE_API_KEY")
 
     return Settings(
         base_id=base_id,
@@ -149,6 +173,7 @@ class AirtableClient:
         fields: list[str] | None = None,
         page_size: int = 100,
         max_records: int | None = None,
+        by_field_id: bool = False,
     ) -> list[dict[str, Any]]:
         all_rows: list[dict[str, Any]] = []
         offset: str | None = None
@@ -159,6 +184,8 @@ class AirtableClient:
                 q.append(("offset", offset))
             for name in fields or []:
                 q.append(("fields[]", name))
+            if by_field_id:
+                q.append(("returnFieldsByFieldId", "true"))
 
             url = f"{API_ROOT}/{self.base_id}/{requests.utils.quote(table, safe='')}"
             try:
@@ -333,7 +360,7 @@ def log_situation_field_diagnostics(
     logger.info(
         "Situation diagnostics — field %r: %d records, %d with this field key in API, "
         "%d with a non-empty value. Value types: %s",
-        field_name,
+        _display_name(field_name, FIELD_DISPLAY_NAMES),
         n,
         with_key,
         non_null,
@@ -399,8 +426,8 @@ def count_prospect_situations(
 
 
 def kpi_payload_from_counts(counts: dict[str, int], total_prospects: int) -> dict[str, int]:
-    """KPIS column names must exist on the KPI row (numbers)."""
-    return {
+    """Keyed by KPIS field id (KPIS_FIELD_IDS), immune to column renames in Airtable."""
+    values = {
         "Lost": int(counts["Lost"]),
         "Lead": int(counts["Lead"]),
         "Prospect": int(counts["Prospect"]),
@@ -408,6 +435,7 @@ def kpi_payload_from_counts(counts: dict[str, int], total_prospects: int) -> dic
         "Student": int(counts["Student"]),
         "Total_Prospect": int(total_prospects),
     }
+    return {KPIS_FIELD_IDS[label]: value for label, value in values.items()}
 
 
 # Airtable field names written on KPIS (for logs / errors)
@@ -458,7 +486,7 @@ def _fetch_prospects(
     client: AirtableClient, table: str, situation_field: str
 ) -> list[dict]:
     try:
-        return client.list_records(table, fields=[situation_field])
+        return client.list_records(table, fields=[situation_field], by_field_id=True)
     except AirtableAPIError as e:
         _raise_api_context(e, prospects=True, situation_field=situation_field)
 
@@ -537,8 +565,8 @@ def main() -> int:
     try:
         logger.info(
             "Fetching %r from table %r …",
-            settings.prospect_situation_field,
-            settings.prospects_table,
+            _display_name(settings.prospect_situation_field, FIELD_DISPLAY_NAMES),
+            _display_name(settings.prospects_table, TABLE_DISPLAY_NAMES),
         )
         prospects = _fetch_prospects(
             client, settings.prospects_table, settings.prospect_situation_field
@@ -571,7 +599,7 @@ def main() -> int:
         elif os.getenv("GITHUB_ACTIONS") == "true" and not do_kpis:
             logger.info(
                 "GitHub Actions: KPIS not written. To enable, set repository Secret or Variable "
-                "UPDATE_KPIS=true, add Secret KPIS_TABLE_NAME, and grant the PAT data.records:write."
+                "UPDATE_KPIS=true and grant the PAT data.records:write on the KPIS table."
             )
 
         logger.info("Done.")
@@ -588,7 +616,7 @@ def main() -> int:
                 "  1. Open https://airtable.com/create/tokens and create a new Personal Access Token.\n"
                 "  2. Enable scope: data.records:read (and data.records:write when updating KPIS).\n"
                 "  3. Under Access, add your base.\n"
-                "  4. Copy the full token into AIRTABLE_PERSONAL_ACCESS_TOKEN in .env.\n"
+                "  4. Copy the full token into AIRTABLE_API_KEY in .env.\n"
                 "  5. Revoke old tokens you no longer use."
             )
         return 5
