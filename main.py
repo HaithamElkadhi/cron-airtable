@@ -257,26 +257,18 @@ DEFAULT_SITUATION_FIELD = "Prospect Situation"
 # Situation values we count (Prospect Situation) and mirror to KPIS number fields.
 ORDERED_LABELS = (
     "Lost",
-    "Engaged",
-    "Last chance",
-    "Admitted",
-    "Serious",
-    "Potential",
-    "Completed",
-    "Undecided",
+    "Lead",
+    "Prospect",
+    "Candidate",
+    "Student",
 )
 
 _ALIAS_TO_CANONICAL: dict[str, str] = {
     "lost": "Lost",
-    "engaged": "Engaged",
-    "last chance": "Last chance",
-    "last_chance": "Last chance",
-    "lastchance": "Last chance",
-    "admitted": "Admitted",
-    "serious": "Serious",
-    "potential": "Potential",
-    "completed": "Completed",
-    "undecided": "Undecided",
+    "lead": "Lead",
+    "prospect": "Prospect",
+    "candidate": "Candidate",
+    "student": "Student",
 }
 
 _WS_RE = re.compile(r"\s+")
@@ -426,23 +418,17 @@ def count_prospect_situations(
 def kpi_payload_from_counts(counts: dict[str, int], total_prospects: int) -> dict[str, int]:
     """KPIS column names must exist on the KPI row (numbers)."""
     return {
-        "Serious": int(counts["Serious"]),
-        "Admitted": int(counts["Admitted"]),
         "Lost": int(counts["Lost"]),
-        "Last_chance": int(counts["Last chance"]),
-        "Engaged": int(counts["Engaged"]),
-        "Potential": int(counts["Potential"]),
-        "Completed": int(counts["Completed"]),
-        "Undecided": int(counts["Undecided"]),
+        "Lead": int(counts["Lead"]),
+        "Prospect": int(counts["Prospect"]),
+        "Candidate": int(counts["Candidate"]),
+        "Student": int(counts["Student"]),
         "Total_Prospect": int(total_prospects),
     }
 
 
 # Airtable field names written on KPIS (for logs / errors)
-KPIS_FIELD_NAMES_LOG = (
-    "Serious, Admitted, Lost, Last_chance, Engaged, Potential, Completed, "
-    "Undecided, Total_Prospect"
-)
+KPIS_FIELD_NAMES_LOG = "Lost, Lead, Prospect, Candidate, Student, Total_Prospect"
 
 
 # --- orchestration -----------------------------------------------------------
